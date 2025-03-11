@@ -1,0 +1,16 @@
+{
+    "manifest_version": 3,
+    "name": "Focus Mode Activity Tracker",
+    "version": "1.0",
+    "description": "Track the current tab's domain and log the time spent.",
+    "permissions": [
+      "tabs"
+    ],
+    "background": {
+      "service_worker": "background.js"
+    },
+    "action": {
+      "default_popup": "popup.html"
+    }
+  }
+  
