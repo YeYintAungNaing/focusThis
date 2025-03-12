@@ -4,13 +4,17 @@
     "version": "1.0",
     "description": "Track the current tab's domain and log the time spent.",
     "permissions": [
-      "tabs"
+      "tabs",
+      "notifications"
     ],
     "background": {
       "service_worker": "background.js"
     },
     "action": {
       "default_popup": "popup.html"
-    }
-  }
+    },
+    "icons": {
+    "48": "icons/warning.png"
+  } 
+}
   
