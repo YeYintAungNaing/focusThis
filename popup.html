@@ -2,11 +2,27 @@
 <html>
 <head>
   <title>Focus Mode</title>
+  <link rel="stylesheet" href="popup.css">
 </head>
-<body>
-  <h3>Focus Mode Active</h3>
-  <p>Track your time spent on various websites.</p>
-  <button id="sendMessageButton">get time</button>
+<body class="popup-container">
+  <h2 class="statusText" id="statusText">Focus Mode : Off</h2>
+  <button class="toggleActive" id="toggleActive">Toggle</button>
+  <p class="totalTime" id="totalTime">00:00:00</p>
+  <div class="option-group">
+    <button class="getTime" id="getTime">get time</button>
+    <button class="addExclusion" id="addExclusion">Exclude this tab</button>
+  </div>
+  <div id="mode-selector">
+    <input type="radio" id="normal" name="mode" value="normal" >
+    <label for="normal">Normal mode to track all</label><br>
+    <input type="radio" id="strict" name="mode" value="strict" >
+    <label for="strict">Strict mode to track as you like</label>
+  </div>
+  <div class="option-group">
+    <button>Customize strict mode</button>
+    <button>Show less</button>
+  </div>
 </body>
-    <script src="popup.js"></script>
+<script src="popup.js"></script>
 </html>
+

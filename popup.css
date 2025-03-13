@@ -1,0 +1,35 @@
+.popup-container{
+    width: 240px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    gap: 10px;
+    background-color: aliceblue;
+    padding-bottom: 7px;
+}
+
+button{
+    cursor: pointer;
+}
+
+
+.totalTime{
+    font-size: 18px;
+    padding: 0;
+    margin: 0;
+    margin: 5px 0;
+    
+}
+
+.option-group{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 35px;
+    gap: 5px;
+}
+
+.option-group button{
+    height: 100%;
+}

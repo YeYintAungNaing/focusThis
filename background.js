@@ -1,30 +1,31 @@
-
-//let currentTabId = null
-// let tabTimers = {}
-// let customTrackList = {}
-// let exceptionTabIds = []
-// let currentTabId = null;
-// let currentDomain = null;
-// let startTime = null;
-
 let previousTabId = null
 let currentTabId = null;
 const tabTracker = {};
-let WARNING_THRESHOLD_MS = 2000
+let WARNING_THRESHOLD_MS = 1 * 20 * 1000
 let intervalRef
 let notificationIds = []
 let isActive = false
+let exclusionTabs = []
+let strictModeDomains = ["www.youtube.com"]
+let currentMode = "normal"
+
 
 
 function isValidUrl(url) {
   try {
-    const hostName =  new URL(url).hostname
-    if (hostName === "extensions" || hostName === "newtab") {
-      return false
-    }
-    else {
-      return true
-    }
+    const parsed = new URL(url);
+    const protocol = parsed.protocol;
+    const hostname = parsed.hostname;
+
+    const invalidProtocols = ['chrome:', 'chrome-extension:', 'about:', 'edge:', 'moz-extension:', 'view-source:', 'devtools:'];
+
+    if (invalidProtocols.includes(protocol)) return false;
+
+    
+    const invalidHostnames = ['newtab', 'extensions', '', 'localhost'];
+    if (invalidHostnames.includes(hostname)) return false;
+
+    return true;
   } catch (e) {
     return false;
   }
@@ -51,9 +52,9 @@ function getDomainFromUrl(url) {
 
 
 function startCheckingInterval() {
+  if (exclusionTabs.includes(currentTabId)) return
   console.log('interval starts')
   intervalRef = setInterval(() => { 
-    if (notificationIds.length > 0) return
     if (currentTabId && tabTracker[currentTabId]) {
       const tracker = tabTracker[currentTabId];
       //if (tracker.warned) return
@@ -64,7 +65,7 @@ function startCheckingInterval() {
         clearInterval(intervalRef)
       }
     }
-  }, 3000);
+  }, 5000);
 }
 
 
@@ -77,24 +78,13 @@ function showWarning(domain, threshHold) {
     priority: 2,
     requireInteraction : true,
     buttons: [
-      { title: 'Dismiss' },
+      { title: 'Exclude this tab' },
       { title: 'Snooze' }
   ],
   }, (notificationId) => {notificationIds.push(notificationId)}
 );
 }
 
-function checkActiveNoti() {
-   chrome.notifications.getAll((notifications) => {
-    if (Object.keys(notifications).length > 0) {
-      console.log('active')
-      return true
-    } else {
-      console.log('not active')
-      return false
-    }
-  });
-}
 
 function clearAllNotifications() {
   if (notificationIds.length < 1) return
@@ -116,7 +106,7 @@ function clearAllNotifications() {
 chrome.notifications.onButtonClicked.addListener(function(notificationId, buttonIndex) {
   console.log('custom')
   if (buttonIndex === 0) {
-    console.log('User clicked Dismiss');
+    addExclusionTab()
   } else if (buttonIndex === 1) {
     //console.log('User clicked Snooze 5 min');
     if (currentTabId && tabTracker[currentTabId]) {
@@ -130,12 +120,13 @@ chrome.notifications.onButtonClicked.addListener(function(notificationId, button
 });
 
 function stopTimer() {
-  if (tabTracker[previousTabId]) {
+  if (tabTracker[previousTabId] && tabTracker[previousTabId].isTracking) {
     clearInterval(intervalRef)
     //console.log('stop')
     const elapsed = Date.now() - tabTracker[previousTabId].lastStartTime;
     tabTracker[previousTabId].totalTime += elapsed;
     tabTracker[previousTabId].lastStartTime = null
+    tabTracker[previousTabId].isTracking = false
     console.log(`⏸ Stopped timer for ${tabTracker[previousTabId].domain}. Total time: ${tabTracker[previousTabId].totalTime} ms`);
     //notifyPopup(tabTracker[previousTabId].domain, tabTracker[previousTabId].totalTime, false);
   }  
@@ -149,22 +140,24 @@ function startTimer(tabId, domain) {
       totalTime: 0,
       lastStartTime: Date.now(),
       warned : false,
-      snoozeMuliplier : 1
+      snoozeMuliplier : 1,
+      isTracking : true
     };
     //console.log('new one')
-  } else {          // same tab id
+  } else {   // same tab id       
     if (tabTracker[tabId].domain !== domain) {    // domain change on refresh, reset timer
       tabTracker[tabId] = {
         domain: domain,
         totalTime: 0,
         lastStartTime: Date.now(),
         warned : false,
-        snoozeMuliplier : 1
+        snoozeMuliplier : 1,
+        isTracking : true
       };
      // console.log('reset and create new one')
     } else {   
       //console.log('resume')                                   // resume previous one
-      tabTracker[tabId] = {...tabTracker[tabId], lastStartTime : Date.now(), warned : false }
+      tabTracker[tabId] = {...tabTracker[tabId], lastStartTime : Date.now(), warned : false, isTracking : true }
     }
   }
   startCheckingInterval()
@@ -172,57 +165,142 @@ function startTimer(tabId, domain) {
   //notifyPopup(domain, tabTracker[tabId].totalTime, true);
 }
 
+function addExclusionTab() {
+  if (currentTabId) {
+    clearInterval(intervalRef)
+    clearAllNotifications()
+    exclusionTabs.push(currentTabId)
+    console.log(currentTabId, "has been added to exclusion list")
+  }
+  else{
+    console.log('failed to find the tabid, please refresh the browser')
+  }
+}
+
 
 chrome.tabs.onActivated.addListener((activeInfo) => {
+  currentTabId = activeInfo.tabId
   if (!isActive) return
   clearAllNotifications()
+  
   chrome.tabs.get(activeInfo.tabId, (tab) => {
-    currentTabId = activeInfo.tabId
     
-    if (!tab || !tab.url || !isValidUrl(tab.url)) {
-      //console.log('this1')
+    if (!tab || !tab.url || !isValidUrl(tab.url)) {  // dont start timer if invalid url and termiante early
       stopTimer();
       return;
     }
 
     const domain = getDomainFromUrl(tab.url);
     stopTimer();
+
+    if (currentMode === "strict") {  // determine whether to track next with domain
+      if (!strictModeDomains.includes(domain)) {
+        console.log('not included')
+        return
+      }
+    }
+
     startTimer(currentTabId, domain);
   });
 });
 
+function simulateTabActivation() {
+  if (!isActive) return
+  clearAllNotifications()
+  
+  chrome.tabs.get(currentTabId, (tab) => {
+    
+    if (!tab || !tab.url || !isValidUrl(tab.url)) {  // dont start timer if invalid url and termiante early
+      stopTimer();
+      return;
+    }
+
+    const domain = getDomainFromUrl(tab.url);
+    stopTimer();
+    if (currentMode === "strict") {  // determine whether to track next with domain
+      if (!strictModeDomains.includes(domain)) {
+        console.log('not included')
+        return
+      }
+    }
+    startTimer(currentTabId, domain);
+  });
+}
+
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     if (!isActive) return
-   if (!changeInfo.url) return;  // terminate early if onUpdate listener is not becuase of url change
+  
+    if (!changeInfo.url) return;  // terminate early if onUpdate listener is not becuase of url change
 
-   if (!tab || !tab.url || !isValidUrl(tab.url)) return;  // invalid url check
- 
-   if (!tab.active || tabId !== currentTabId) return;  // termiante on background tab update
-   clearAllNotifications()
- 
-   const domain = getDomainFromUrl(tab.url);
-   if (domain !== tabTracker[currentTabId]?.domain ) {  // reset timer and start new one of the updated domain is not the same on the focus tab
-    console.log('wtf')
-     stopTimer();
-     currentTabId = tabId // note really needed
-     startTimer(currentTabId, domain);
+    if (!tab || !tab.url || !isValidUrl(tab.url)) return;  // invalid url check
+  
+    if (!tab.active || tabId !== currentTabId) return;  // termiante on background tab update
+    clearAllNotifications()
+  
+    const domain = getDomainFromUrl(tab.url);
+    if (domain !== tabTracker[currentTabId]?.domain ) {  // reset timer and start new one of the updated domain is not the same on the focus tab
+      stopTimer();
+      currentTabId = tabId // note really needed
+      if (currentMode === "strict") {  // determine whether to track next with domain
+        if (!strictModeDomains.includes(domain)) return
+      }
+      startTimer(currentTabId, domain);
    }
 });
 
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'getTime') {
-    //console.log('Message received in background:', message.message);
-    const elapsed = Date.now() - tabTracker[currentTabId].lastStartTime;
-    //tabTracker[currentTabId].totalTime += elapsed;
-    console.log(tabTracker[currentTabId].totalTime + elapsed)
-    console.log(tabTracker)
-    sendResponse({ status: 'success', data: `total time : ${tabTracker[currentTabId].totalTime} ` });
+
+    if (tabTracker[currentTabId]) {  
+      if (tabTracker[currentTabId].lastStartTime) {
+        const elapsed = Date.now() - tabTracker[currentTabId].lastStartTime;
+        sendResponse({ status: 'success', data: tabTracker[currentTabId].totalTime + elapsed});
+      }
+      else{
+        sendResponse({ status: 'success', data: tabTracker[currentTabId].totalTime});
+      }
+      
+    }
+    else {   // if user call this fucntion when isActive is false (have not evoke startTimer yet)
+      sendResponse({ status: 'success', data: 0});
+    }
+    
   }
-  if (message.action === 'active') {
-    isActive = true
+  else if (message.action === 'toggleActive') {
+    isActive = !isActive
+
+    if (isActive){
+      simulateTabActivation()   // this will always clear noti and interval
+    }
+    else {
+      clearAllNotifications()   // manually clear noti and interval for 
+      stopTimer()
+      clearInterval(intervalRef)
+    }
+    sendResponse({ status: 'success', data : isActive });
+  }
+
+  else if (message.action === 'addExclusion') {
+    addExclusionTab()
     sendResponse({ status: 'success' });
+  }
+
+  else if (message.action === "setTrackingMode") {
+    if (message.mode === currentMode) {
+      return // does not distrub current flow when the mode is the same
+    }
+    else {
+      clearInterval(intervalRef)
+      currentMode = message.mode
+      console.log(currentTabId)
+      simulateTabActivation()  // initiate the current tab with newly selected mode
+    }
+  }
+
+  else if (message.action === "currentState") {
+    sendResponse({ status: 'success', currentState : isActive , mode : currentMode  });
   }
 });
 
