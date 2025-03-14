@@ -1,5 +1,8 @@
 let isOn;
 let currentMode;
+let stopWatchRef
+let currentUrl
+let strictModeDomains = ["www.youtube.com"]
 
 document.addEventListener('DOMContentLoaded', () => {
   // Ask background for isActive
@@ -11,11 +14,29 @@ document.addEventListener('DOMContentLoaded', () => {
       updateModeSelectorState(isOn);
       currentMode = response.mode
       document.getElementById(currentMode).checked = true
-    } else {
+      if (response.isExcluded) {
+        document.getElementById('message').textContent = "Excluded tab: You won't get alerted!"
+      }
+      chrome.runtime.sendMessage(
+        { action: 'getTime' },
+        (response) => {
+          if (response) {
+            //console.log('Response from background:', response.data);
+            let lapsedTime = response.data + 700
+            totalTime.textContent = formatTime(lapsedTime)
+            showStopWatch(lapsedTime)
+    
+          } else {
+            console.log('No response received or background error');
+          }
+        }
+      );
+    } 
+    else {
       console.log('Could not get isActive state');
     }
   });
-});
+}); 
 
 document.getElementById('toggleActive').addEventListener('click', () => {
     chrome.runtime.sendMessage(
@@ -23,6 +44,21 @@ document.getElementById('toggleActive').addEventListener('click', () => {
       (response) => {
         if (response) {
           isOn = response.data
+          clearInterval(stopWatchRef)
+          chrome.runtime.sendMessage(
+            { action: 'getTime' },
+            (response) => {
+              if (response) {
+                //console.log('Response from background:', response.data);
+                let lapsedTime = response.data + 300
+                totalTime.textContent = formatTime(lapsedTime)
+                showStopWatch(lapsedTime)
+        
+              } else {
+                console.log('No response received or background error');
+              }
+            }
+          );
           const statusText = document.getElementById('statusText');
           statusText.textContent = isOn ? 'Focus Mode: ON' : 'Focus Mode: OFF';
           updateModeSelectorState(isOn)
@@ -34,16 +70,18 @@ document.getElementById('toggleActive').addEventListener('click', () => {
     );
 });
 
+const totalTime = document.getElementById('totalTime')
 
 document.getElementById('getTime').addEventListener('click', () => {
+  clearInterval(stopWatchRef)
   chrome.runtime.sendMessage(
     { action: 'getTime' },
     (response) => {
       if (response) {
         //console.log('Response from background:', response.data);
-        const totalTime = document.getElementById('totalTime')
-        const formatedTime = formatTime(response.data)
-        totalTime.textContent = formatedTime
+        let lapsedTime = response.data + 700
+        totalTime.textContent = formatTime(lapsedTime)
+        showStopWatch(lapsedTime)
 
       } else {
         console.log('No response received or background error');
@@ -57,7 +95,7 @@ document.getElementById('addExclusion').addEventListener('click', () => {
     { action: 'addExclusion' },
     (response) => {
       if (response) {
-        console.log('Response from background');
+        document.getElementById('message').textContent = "Excluded tab: You won't get alerted!"
       } else {
         console.log('No response received or background error');
       }
@@ -72,6 +110,13 @@ document.getElementById('mode-selector').addEventListener('change', (e) => {
   }
 });
 
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action === 'tabExcluded') {
+    document.getElementById('message').textContent = "Excluded tab: You won't get alerted!";
+  }
+});
+
 function updateModeSelectorState(isActive) {
   const radios = document.querySelectorAll('#mode-selector input[type="radio"]');
   radios.forEach(radio => {
@@ -79,6 +124,68 @@ function updateModeSelectorState(isActive) {
   });
 }
 
+
+function getCurrentUrl() {
+  return new Promise((resolve) => {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      resolve(tabs[0]?.url);
+    });
+  });
+}
+
+function isValidUrl_(url) {
+  console.log(url)
+  try {
+    const parsed = new URL(url);
+    const protocol = parsed.protocol;
+    const hostname = parsed.hostname;
+    console.log(hostname)
+    console.log(protocol)
+
+    const invalidProtocols = ['chrome:', 'chrome-extension:', 'about:', 'edge:', 'moz-extension:', 'view-source:', 'devtools:'];
+
+    if (invalidProtocols.includes(protocol)) return false;
+
+    
+    const invalidHostnames = ['newtab', 'extensions', '', 'localhost'];
+    if (invalidHostnames.includes(hostname)) return false;
+
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+
+function getDomainFromUrl_(url) {
+  try {
+    return new URL(url).hostname;
+  } catch (e) {
+    return null;
+  }
+}
+
+ async function showStopWatch(lapsedTime) {
+  if (!isOn) return
+  currentUrl = await getCurrentUrl()
+
+  if (!isValidUrl_(currentUrl)) {
+    console.log('not valid')
+    return
+  }
+  if (currentMode === "strict") {
+    const currentDomainName = getDomainFromUrl_(currentUrl)
+    if (!strictModeDomains.includes(currentDomainName)) {
+      console.log('not included')
+      return
+    }
+  }
+ 
+  stopWatchRef = setInterval(() => {
+    lapsedTime += 1000
+    totalTime.textContent= formatTime(lapsedTime)
+  }, 1000);
+}
 
 function formatTime(ms) {
   const totalSeconds = Math.floor(ms / 1000);

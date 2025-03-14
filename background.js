@@ -8,8 +8,11 @@ let isActive = false
 let exclusionTabs = []
 let strictModeDomains = ["www.youtube.com"]
 let currentMode = "normal"
+let isTrackingTarget = true
 
-
+// to test , whether triggering isActive and toggle mode is correctly clearing and resuming the normal flow of tracking
+// to test , whether clearinterval and clearMessage are called correclty 
+// make sure to stop timer for every distructive mode switch
 
 function isValidUrl(url) {
   try {
@@ -107,6 +110,7 @@ chrome.notifications.onButtonClicked.addListener(function(notificationId, button
   console.log('custom')
   if (buttonIndex === 0) {
     addExclusionTab()
+
   } else if (buttonIndex === 1) {
     //console.log('User clicked Snooze 5 min');
     if (currentTabId && tabTracker[currentTabId]) {
@@ -120,8 +124,8 @@ chrome.notifications.onButtonClicked.addListener(function(notificationId, button
 });
 
 function stopTimer() {
+  clearInterval(intervalRef)
   if (tabTracker[previousTabId] && tabTracker[previousTabId].isTracking) {
-    clearInterval(intervalRef)
     //console.log('stop')
     const elapsed = Date.now() - tabTracker[previousTabId].lastStartTime;
     tabTracker[previousTabId].totalTime += elapsed;
@@ -170,6 +174,7 @@ function addExclusionTab() {
     clearInterval(intervalRef)
     clearAllNotifications()
     exclusionTabs.push(currentTabId)
+    chrome.runtime.sendMessage({ action: 'tabExcluded', currentTabId });
     console.log(currentTabId, "has been added to exclusion list")
   }
   else{
@@ -180,6 +185,7 @@ function addExclusionTab() {
 
 chrome.tabs.onActivated.addListener((activeInfo) => {
   currentTabId = activeInfo.tabId
+  console.log(currentTabId)
   if (!isActive) return
   clearAllNotifications()
   
@@ -300,7 +306,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   else if (message.action === "currentState") {
-    sendResponse({ status: 'success', currentState : isActive , mode : currentMode  });
+    let isExcluded
+    if (exclusionTabs.includes(currentTabId)) {
+      isExcluded = true
+    }
+    else {
+      isExcluded = false  
+    }
+    sendResponse({ status: 'success', currentState : isActive , mode : currentMode, isExcluded  });
   }
 });
 
