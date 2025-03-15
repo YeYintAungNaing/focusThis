@@ -5,7 +5,7 @@ let timeLimitInput = document.getElementById("limitInput")
 
 chrome.storage.local.get(['timeLimit'], (result) => {
     console.log(result)
-    timeLimit = result.timeLimit || 4;
+    timeLimit = result.timeLimit/ 60000 || 4;
     document.getElementById('showTimeLimit').textContent = `Current time limit: ${timeLimit} minutes`
 });
   
@@ -25,4 +25,9 @@ document.getElementById("changeLimit").addEventListener("click", () => {
         chrome.storage.local.set({ timeLimit : timeLimitInput.value * 60 * 1000 });
     }
 });
+
+document.getElementById('addStrict').addEventListener("click", () => {
+    window.alert('This feature is still in development...')
+})
+
   

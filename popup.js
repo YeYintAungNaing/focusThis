@@ -19,23 +19,30 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById(currentMode).checked = true
       if (response.isExcluded) {
         document.getElementById('message').textContent = "Excluded tab: You won't get alerted!"
+        document.getElementById('addExclusion').disabled = true
       }
       else {
-        timeLimit = response.timeLimit / 60000
-        document.getElementById('message').textContent = `Current time limit: ${timeLimit} minutes`
+        if (isNaN(response.timeLimit)) {
+          document.getElementById('message').textContent = `Failed to get time data , please close the popup to refresh`
+        }
+        else{
+          timeLimit = response.timeLimit / 60000
+          document.getElementById('message').textContent = `Current time limit: ${timeLimit} minutes`
+        }
       }
 
+      clearInterval(stopWatchRef)
       chrome.runtime.sendMessage(
-        { action: 'getTime' },
-        (response) => {
-          if (response) {
+          { action: 'getTime' },
+          (response) => {
+            if (response) {
             //console.log('Response from background:', response.data);
-            let lapsedTime = response.data + 700
+            let lapsedTime = response.data + 300
             totalTime.textContent = formatTime(lapsedTime)
             showStopWatch(lapsedTime)
-    
+        
           } else {
-            console.log('No response received or background error');
+                console.log('No response received or background error');
           }
         }
       );
@@ -137,6 +144,7 @@ document.getElementById('mode-selector').addEventListener('change', (e) => {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'tabExcluded') {
     document.getElementById('message').textContent = "Excluded tab: You won't get alerted!";
+    document.getElementById('addExclusion').disabled = true
   }
 });
 

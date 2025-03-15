@@ -11,6 +11,12 @@
 
 button{
     cursor: pointer;
+    
+}
+
+button:hover{
+    background-color: rgb(49, 126, 193);
+    
 }
 
 .more-btn {

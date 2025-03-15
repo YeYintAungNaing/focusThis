@@ -13,17 +13,17 @@ let isTrackingTarget = true
 // to test , whether triggering isActive and toggle mode is correctly clearing and resuming the normal flow of tracking
 // to test , whether clearinterval and clearMessage are called correclty 
 // make sure to stop timer for every distructive mode switch
+// huge problem : track time in web 1, toggle off, update the url to different one on the same tab, url updated but the total time is the same as previous one, because isActive termiante the normal flow of chrome.tabs.onUpdated, so previous time data remains 
 
 chrome.storage.local.get(['timeLimit'], (result) => {
-  WARNING_THRESHOLD_MS =  result.timeLimit || 4 * 20 * 1000;
+  WARNING_THRESHOLD_MS =  result.timeLimit || 4 * 60 * 1000;
   console.log(WARNING_THRESHOLD_MS)
-
 });
 
 
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area === 'local' && changes.timeLimit) {
-   WARNING_THRESHOLD_MS = changes.timeLimit.newValue || 4 * 20 * 1000;
+   WARNING_THRESHOLD_MS = changes.timeLimit.newValue || 4 * 60 * 1000;
    console.log(`updated limit : ${WARNING_THRESHOLD_MS}`)
   }
 });
@@ -226,9 +226,20 @@ chrome.tabs.onActivated.addListener((activeInfo) => {
   });
 });
 
-function simulateTabActivation() {
+async function simulateTabActivation() {
   if (!isActive) return
   clearAllNotifications()
+
+  if (typeof currentTabId === 'undefined' || currentTabId === null) {
+    try {
+      currentTabId = await getCurrentTabId();
+    } catch (err) {
+      console.error('Failed to get current tab ID:', err);
+      return;
+    }
+  }
+
+  if (!currentTabId) return;
   
   chrome.tabs.get(currentTabId, (tab) => {
     
@@ -263,7 +274,8 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     const domain = getDomainFromUrl(tab.url);
     if (domain !== tabTracker[currentTabId]?.domain ) {  // reset timer and start new one of the updated domain is not the same on the focus tab
       stopTimer();
-      currentTabId = tabId // note really needed
+      //chrome.runtime.sendMessage({ action: 'urlUpdated', currentTabId });
+      currentTabId = tabId // not really needed
       if (currentMode === "strict") {  // determine whether to track next with domain
         if (!strictModeDomains.includes(domain)) return
       }
@@ -286,6 +298,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       
     }
     else {   // if user call this fucntion when isActive is false (have not evoke startTimer yet)
+      console.log('this')
       sendResponse({ status: 'success', data: 0});
     }
     
@@ -332,6 +345,25 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     sendResponse({ status: 'success', currentState : isActive , mode : currentMode, isExcluded, timeLimit : WARNING_THRESHOLD_MS });
   }
 });
+
+
+function getCurrentTabId() {
+  console.log('this get called')
+  return new Promise((resolve, reject) => {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (chrome.runtime.lastError) {
+        reject(chrome.runtime.lastError);
+        return;
+      }
+      if (tabs && tabs.length > 0) {
+        resolve(tabs[0].id);
+      } else {
+        resolve(null);
+      }
+    });
+  });
+}
+
 
 
   
