@@ -3,6 +3,9 @@ let currentMode;
 let stopWatchRef
 let currentUrl
 let strictModeDomains = ["www.youtube.com"]
+let timeLimit
+const totalTime = document.getElementById('totalTime')
+
 
 document.addEventListener('DOMContentLoaded', () => {
   // Ask background for isActive
@@ -17,6 +20,11 @@ document.addEventListener('DOMContentLoaded', () => {
       if (response.isExcluded) {
         document.getElementById('message').textContent = "Excluded tab: You won't get alerted!"
       }
+      else {
+        timeLimit = response.timeLimit / 60000
+        document.getElementById('message').textContent = `Current time limit: ${timeLimit} minutes`
+      }
+
       chrome.runtime.sendMessage(
         { action: 'getTime' },
         (response) => {
@@ -70,25 +78,25 @@ document.getElementById('toggleActive').addEventListener('click', () => {
     );
 });
 
-const totalTime = document.getElementById('totalTime')
 
-document.getElementById('getTime').addEventListener('click', () => {
-  clearInterval(stopWatchRef)
-  chrome.runtime.sendMessage(
-    { action: 'getTime' },
-    (response) => {
-      if (response) {
-        //console.log('Response from background:', response.data);
-        let lapsedTime = response.data + 700
-        totalTime.textContent = formatTime(lapsedTime)
-        showStopWatch(lapsedTime)
 
-      } else {
-        console.log('No response received or background error');
-      }
-    }
-  );
-});
+// document.getElementById('getTime').addEventListener('click', () => {
+//   clearInterval(stopWatchRef)
+//   chrome.runtime.sendMessage(
+//     { action: 'getTime' },
+//     (response) => {
+//       if (response) {
+//         //console.log('Response from background:', response.data);
+//         let lapsedTime = response.data + 700
+//         totalTime.textContent = formatTime(lapsedTime)
+//         showStopWatch(lapsedTime)
+
+//       } else {
+//         console.log('No response received or background error');
+//       }
+//     }
+//   );
+// });
 
 document.getElementById('addExclusion').addEventListener('click', () => {
   chrome.runtime.sendMessage(
@@ -107,6 +115,21 @@ document.getElementById('mode-selector').addEventListener('change', (e) => {
   if (e.target.name === 'mode') {
     currentMode = e.target.value;
     chrome.runtime.sendMessage({ action: 'setTrackingMode', mode: currentMode });
+    clearInterval(stopWatchRef)
+    chrome.runtime.sendMessage(
+      { action: 'getTime' },
+      (response) => {
+        if (response) {
+          //console.log('Response from background:', response.data);
+          let lapsedTime = response.data + 300
+          totalTime.textContent = formatTime(lapsedTime)
+          showStopWatch(lapsedTime)
+  
+        } else {
+          console.log('No response received or background error');
+        }
+      }
+    );
   }
 });
 
@@ -123,6 +146,24 @@ function updateModeSelectorState(isActive) {
     radio.disabled = !isActive;
   });
 }
+
+
+document.getElementById("openSetting").addEventListener("click", () => {
+  chrome.runtime.openOptionsPage();
+});
+
+document.getElementById('less-btn').addEventListener('click', () => {
+  document.getElementById('hideContent').style.display = "none"
+  document.getElementById('more-btn').style.display = "inline-block"
+  document.getElementById('statusText').style.display = "none"
+} )
+
+document.getElementById('more-btn').addEventListener('click', () => {
+  document.getElementById('hideContent').style.display = "flex"
+  document.getElementById('more-btn').style.display = "none"
+  document.getElementById('statusText').style.display = ""
+
+} )
 
 
 function getCurrentUrl() {

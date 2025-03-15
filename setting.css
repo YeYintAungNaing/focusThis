@@ -1,0 +1,19 @@
+body{
+    background-color: rgb(26, 26, 26);
+    color: white; 
+    display: flex;
+    justify-content: center;
+}
+
+.setting-container{
+    background-color: rgb(26, 26, 26);
+    color: white;
+    border: 1px solid rgb(71, 69, 69);
+    padding: 10px;
+}
+
+
+.stritModeList{
+    background-color: black;
+    padding: 5px;
+}

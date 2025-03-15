@@ -13,14 +13,28 @@ button{
     cursor: pointer;
 }
 
+.more-btn {
+    display: none;
+}
+
+.hideContent{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    gap: 10px;
+}
 
 .totalTime{
-    font-size: 18px;
-    padding: 0;
-    margin: 0;
-    margin: 5px 0;
-    
+    font-size: 20px;
+    margin: 0;   
 }
+
+p {
+    margin: 8px 0;
+    font-size: 13px
+}
+
 
 .option-group{
     display: flex;

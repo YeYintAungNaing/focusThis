@@ -1,7 +1,7 @@
 let previousTabId = null
 let currentTabId = null;
 const tabTracker = {};
-let WARNING_THRESHOLD_MS = 1 * 20 * 1000
+let WARNING_THRESHOLD_MS;
 let intervalRef
 let notificationIds = []
 let isActive = false
@@ -13,6 +13,20 @@ let isTrackingTarget = true
 // to test , whether triggering isActive and toggle mode is correctly clearing and resuming the normal flow of tracking
 // to test , whether clearinterval and clearMessage are called correclty 
 // make sure to stop timer for every distructive mode switch
+
+chrome.storage.local.get(['timeLimit'], (result) => {
+  WARNING_THRESHOLD_MS =  result.timeLimit || 4 * 20 * 1000;
+  console.log(WARNING_THRESHOLD_MS)
+
+});
+
+
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === 'local' && changes.timeLimit) {
+   WARNING_THRESHOLD_MS = changes.timeLimit.newValue || 4 * 20 * 1000;
+   console.log(`updated limit : ${WARNING_THRESHOLD_MS}`)
+  }
+});
 
 function isValidUrl(url) {
   try {
@@ -122,6 +136,8 @@ chrome.notifications.onButtonClicked.addListener(function(notificationId, button
     } 
   }
 });
+
+
 
 function stopTimer() {
   clearInterval(intervalRef)
@@ -313,30 +329,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     else {
       isExcluded = false  
     }
-    sendResponse({ status: 'success', currentState : isActive , mode : currentMode, isExcluded  });
+    sendResponse({ status: 'success', currentState : isActive , mode : currentMode, isExcluded, timeLimit : WARNING_THRESHOLD_MS });
   }
 });
 
-// chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-//   if (msg.type === 'GET_TIMER_STATE') {
-//     const tracker = tabTracker[currentTabId];
-//     if (tracker) {
-//       sendResponse({
-//         domain: tracker.domain,
-//         totalTime: tracker.totalTime,
-//         isRunning: tracker.lastStartTime !== null
-//       });
-//     } else {
-//       sendResponse({ domain: null, totalTime: 0, isRunning: false });
-//     }
-//   }
-//   if (msg.type === 'SYNC_TOTAL_TIME') {
-//     const tracker = tabTracker[currentTabId];
-//     if (tracker) {
-//       tracker.totalTime = msg.totalTime;
-//     }
-//   }
-// });
 
   
   
