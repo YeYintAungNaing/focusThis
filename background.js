@@ -6,7 +6,7 @@ let intervalRef
 let notificationIds = []
 let isActive = false
 let exclusionTabs = []
-let strictModeDomains = ["www.youtube.com"]
+let strictModeDomains = ["www.youtube.com", "www.reddit.com"];
 let currentMode = "normal"
 let isTrackingTarget = true
 
@@ -16,9 +16,11 @@ let isTrackingTarget = true
 // huge problem : track time in web 1, toggle off, update the url to different one on the same tab, url updated but the total time is the same as previous one, because isActive termiante the normal flow of chrome.tabs.onUpdated, so previous time data remains 
 
 
-chrome.storage.local.get(['timeLimit'], (result) => {
+chrome.storage.local.get(['timeLimit', "strictModeDomains"], (result) => {
+  strictModeDomains = result.strictModeDomains || ["www.youtube.com", "www.reddit.com"]
   WARNING_THRESHOLD_MS =  result.timeLimit || 4 * 60 * 1000;
   console.log(WARNING_THRESHOLD_MS)
+  console.log(strictModeDomains)
 });
 
 // const keepAlive = () => setInterval(chrome.runtime.getPlatformInfo, 24000);
@@ -35,8 +37,12 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area === 'local' && changes.timeLimit) {
-   WARNING_THRESHOLD_MS = changes.timeLimit.newValue || 4 * 60 * 1000;
-   console.log(`updated limit : ${WARNING_THRESHOLD_MS}`)
+    WARNING_THRESHOLD_MS = changes.timeLimit.newValue || 4 * 60 * 1000;
+    console.log(`updated limit : ${WARNING_THRESHOLD_MS}`)
+  }
+  else if (area === 'local' && changes.strictModeDomains) {
+    strictModeDomains = changes.strictModeDomains.newValue || ["www.youtube.com", "www.reddit.com"]
+    console.log(`updated list : ${strictModeDomains}`)
   }
 });
 
@@ -233,7 +239,8 @@ chrome.tabs.onActivated.addListener((activeInfo) => {
 
     if (currentMode === "strict") {  // determine whether to track next with domain
       if (!strictModeDomains.includes(domain)) {
-        console.log('not included')
+        console.log(domain)
+        console.log(strictModeDomains)
         return
       }
     }
@@ -292,6 +299,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
       stopTimer();
       //chrome.runtime.sendMessage({ action: 'urlUpdated', currentTabId });
       currentTabId = tabId // not really needed
+      console.log('same tab updated url')
       if (currentMode === "strict") {  // determine whether to track next with domain
         if (!strictModeDomains.includes(domain)) return
       }
@@ -358,7 +366,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     else {
       isExcluded = false  
     }
-    sendResponse({ status: 'success', currentState : isActive , mode : currentMode, isExcluded, timeLimit : WARNING_THRESHOLD_MS });
+    sendResponse({ status: 'success', 
+      currentState : isActive , 
+      mode : currentMode, 
+      isExcluded, 
+      timeLimit : WARNING_THRESHOLD_MS,
+      strictModeDomains
+    });
   }
 });
 

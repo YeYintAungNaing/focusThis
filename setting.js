@@ -1,20 +1,14 @@
-let strictModeDomains = ["youtube.com", "reddit.com"]
+let strictModeDomains = ["www.youtube.com", "www.reddit.com"]
 let timeLimit
 let timeLimitInput = document.getElementById("limitInput")
 // have to send MS to background since comparing is done in MS
 
-chrome.storage.local.get(['timeLimit'], (result) => {
-    console.log(result)
+chrome.storage.local.get(['timeLimit', "strictModeDomains"], (result) => {
     timeLimit = result.timeLimit/ 60000 || 4;
+    strictModeDomains = result.strictModeDomains || ["www.youtube.com", "www.reddit.com"]
     document.getElementById('showTimeLimit').textContent = `Current time limit: ${timeLimit} minutes`
+    renderStrictModeList()
 });
-  
-//  chrome.storage.onChanged.addListener((changes, area) => {
-//      if (area === 'local' && changes.strictModeDomains) {
-//        strictModeDomains = changes.strictModeDomains.newValue || [];
-//       console.log('strictModeDomains updated:', strictModeDomains);
-//      }
-//  });
 
 
 document.getElementById("changeLimit").addEventListener("click", () => {
@@ -26,8 +20,29 @@ document.getElementById("changeLimit").addEventListener("click", () => {
     }
 });
 
+function renderStrictModeList() {
+    const listContainer = document.getElementById("stritModeList");
+  
+    listContainer.innerHTML = "";
+  
+    strictModeDomains.forEach(domain => {
+      const li = document.createElement("li");
+      li.textContent = domain;
+      listContainer.appendChild(li);
+    });
+}
+
+
 document.getElementById('addStrict').addEventListener("click", () => {
-    window.alert('This feature is still in development...')
+    const input = document.getElementById("urlInput");
+    const newDomain = input.value.trim();
+
+  if (newDomain && !strictModeDomains.includes(newDomain)) {
+    strictModeDomains.push(newDomain);
+    renderStrictModeList(); 
+    input.value = ""; 
+    chrome.storage.local.set({ strictModeDomains });
+  }
 })
 
   

@@ -2,7 +2,7 @@ let isOn;
 let currentMode;
 let stopWatchRef
 let currentUrl
-let strictModeDomains = ["www.youtube.com"]
+let strictModeDomains = ["www.youtube.com", "www.reddit.com"]
 let timeLimit
 const totalTime = document.getElementById('totalTime')
 
@@ -20,6 +20,10 @@ document.addEventListener('DOMContentLoaded', () => {
       if (response.isExcluded) {
         document.getElementById('message').textContent = "Excluded tab: You won't get alerted!"
         document.getElementById('addExclusion').disabled = true
+      }
+
+      if (response.strictModeDomains) {
+        strictModeDomains = response.strictModeDomains
       }
       else {
         if (isNaN(response.timeLimit)) {
@@ -86,25 +90,6 @@ document.getElementById('toggleActive').addEventListener('click', () => {
     );
 });
 
-
-
-// document.getElementById('getTime').addEventListener('click', () => {
-//   clearInterval(stopWatchRef)
-//   chrome.runtime.sendMessage(
-//     { action: 'getTime' },
-//     (response) => {
-//       if (response) {
-//         //console.log('Response from background:', response.data);
-//         let lapsedTime = response.data + 700
-//         totalTime.textContent = formatTime(lapsedTime)
-//         showStopWatch(lapsedTime)
-
-//       } else {
-//         console.log('No response received or background error');
-//       }
-//     }
-//   );
-// });
 
 document.getElementById('addExclusion').addEventListener('click', () => {
   chrome.runtime.sendMessage(
@@ -228,7 +213,6 @@ function getDomainFromUrl_(url) {
   if (currentMode === "strict") {
     const currentDomainName = getDomainFromUrl_(currentUrl)
     if (!strictModeDomains.includes(currentDomainName)) {
-      console.log('not included')
       return
     }
   }
