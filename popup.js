@@ -76,6 +76,7 @@ document.getElementById('toggleActive').addEventListener('click', () => {
           );
           const statusText = document.getElementById('statusText');
           statusText.textContent = isOn ? 'Focus Mode: ON' : 'Focus Mode: OFF';
+
           updateModeSelectorState(isOn)
           //button.textContent = isOn ? "On" : "Off"
         } else {
@@ -181,6 +182,8 @@ function getCurrentUrl() {
     });
   });
 }
+
+
 
 function isValidUrl_(url) {
   console.log(url)

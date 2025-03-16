@@ -1,7 +1,7 @@
 let previousTabId = null
 let currentTabId = null;
 const tabTracker = {};
-let WARNING_THRESHOLD_MS;
+let WARNING_THRESHOLD_MS
 let intervalRef
 let notificationIds = []
 let isActive = false
@@ -15,11 +15,23 @@ let isTrackingTarget = true
 // make sure to stop timer for every distructive mode switch
 // huge problem : track time in web 1, toggle off, update the url to different one on the same tab, url updated but the total time is the same as previous one, because isActive termiante the normal flow of chrome.tabs.onUpdated, so previous time data remains 
 
+
 chrome.storage.local.get(['timeLimit'], (result) => {
   WARNING_THRESHOLD_MS =  result.timeLimit || 4 * 60 * 1000;
   console.log(WARNING_THRESHOLD_MS)
 });
 
+// const keepAlive = () => setInterval(chrome.runtime.getPlatformInfo, 24000);
+// chrome.runtime.onStartup.addListener(keepAlive);
+// keepAlive();
+
+chrome.alarms.create('keepAliveAlarm', { periodInMinutes: 0.4 });
+
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === 'keepAliveAlarm') {
+    chrome.runtime.getPlatformInfo(() => {});
+  }
+});
 
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area === 'local' && changes.timeLimit) {
@@ -75,6 +87,7 @@ function startCheckingInterval() {
     if (currentTabId && tabTracker[currentTabId]) {
       const tracker = tabTracker[currentTabId];
       //if (tracker.warned) return
+      console.log('intervals')
       const elapsed = tracker.lastStartTime ? Date.now() - tracker.lastStartTime : 0;
       const currentTotalTime = tracker.totalTime + elapsed;
       if (currentTotalTime >= WARNING_THRESHOLD_MS * tracker.snoozeMuliplier) { 
@@ -202,8 +215,11 @@ function addExclusionTab() {
 chrome.tabs.onActivated.addListener((activeInfo) => {
   currentTabId = activeInfo.tabId
   console.log(currentTabId)
+  console.log('from activation', WARNING_THRESHOLD_MS)
   if (!isActive) return
   clearAllNotifications()
+  console.log(tabTracker)
+  console.log(previousTabId)
   
   chrome.tabs.get(activeInfo.tabId, (tab) => {
     
@@ -314,7 +330,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       stopTimer()
       clearInterval(intervalRef)
     }
-    sendResponse({ status: 'success', data : isActive });
+    sendResponse({ status: 'success', data : isActive});
   }
 
   else if (message.action === 'addExclusion') {
@@ -363,6 +379,10 @@ function getCurrentTabId() {
     });
   });
 }
+
+
+//////////////////////
+
 
 
 
