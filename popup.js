@@ -171,13 +171,13 @@ function getCurrentUrl() {
 
 
 function isValidUrl_(url) {
-  console.log(url)
+  //console.log(url)
   try {
     const parsed = new URL(url);
     const protocol = parsed.protocol;
     const hostname = parsed.hostname;
-    console.log(hostname)
-    console.log(protocol)
+    //console.log(hostname)
+    //console.log(protocol)
 
     const invalidProtocols = ['chrome:', 'chrome-extension:', 'about:', 'edge:', 'moz-extension:', 'view-source:', 'devtools:'];
 
@@ -207,7 +207,7 @@ function getDomainFromUrl_(url) {
   currentUrl = await getCurrentUrl()
 
   if (!isValidUrl_(currentUrl)) {
-    console.log('not valid')
+    //console.log('not valid')
     return
   }
   if (currentMode === "strict") {

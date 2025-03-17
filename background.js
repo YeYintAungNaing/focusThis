@@ -19,8 +19,8 @@ let isTrackingTarget = true
 chrome.storage.local.get(['timeLimit', "strictModeDomains"], (result) => {
   strictModeDomains = result.strictModeDomains || ["www.youtube.com", "www.reddit.com"]
   WARNING_THRESHOLD_MS =  result.timeLimit || 4 * 60 * 1000;
-  console.log(WARNING_THRESHOLD_MS)
-  console.log(strictModeDomains)
+  //console.log(WARNING_THRESHOLD_MS)
+  //console.log(strictModeDomains)
 });
 
 // const keepAlive = () => setInterval(chrome.runtime.getPlatformInfo, 24000);
@@ -157,7 +157,6 @@ chrome.notifications.onButtonClicked.addListener(function(notificationId, button
 });
 
 
-
 function stopTimer() {
   clearInterval(intervalRef)
   if (tabTracker[previousTabId] && tabTracker[previousTabId].isTracking) {
@@ -220,8 +219,8 @@ function addExclusionTab() {
 
 chrome.tabs.onActivated.addListener((activeInfo) => {
   currentTabId = activeInfo.tabId
-  console.log(currentTabId)
-  console.log('from activation', WARNING_THRESHOLD_MS)
+  // console.log(currentTabId)
+  // console.log('from activation', WARNING_THRESHOLD_MS)
   if (!isActive) return
   clearAllNotifications()
   console.log(tabTracker)
@@ -239,8 +238,8 @@ chrome.tabs.onActivated.addListener((activeInfo) => {
 
     if (currentMode === "strict") {  // determine whether to track next with domain
       if (!strictModeDomains.includes(domain)) {
-        console.log(domain)
-        console.log(strictModeDomains)
+        //console.log(domain)
+        //console.log(strictModeDomains)
         return
       }
     }
@@ -275,7 +274,7 @@ async function simulateTabActivation() {
     stopTimer();
     if (currentMode === "strict") {  // determine whether to track next with domain
       if (!strictModeDomains.includes(domain)) {
-        console.log('not included')
+        //console.log('not included')
         return
       }
     }
@@ -299,7 +298,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
       stopTimer();
       //chrome.runtime.sendMessage({ action: 'urlUpdated', currentTabId });
       currentTabId = tabId // not really needed
-      console.log('same tab updated url')
+      //console.log('same tab updated url')
       if (currentMode === "strict") {  // determine whether to track next with domain
         if (!strictModeDomains.includes(domain)) return
       }
@@ -322,7 +321,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       
     }
     else {   // if user call this fucntion when isActive is false (have not evoke startTimer yet)
-      console.log('this')
+      //console.log('this')
       sendResponse({ status: 'success', data: 0});
     }
     
@@ -353,7 +352,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     else {
       clearInterval(intervalRef)
       currentMode = message.mode
-      console.log(currentTabId)
+      //console.log(currentTabId)
       simulateTabActivation()  // initiate the current tab with newly selected mode
     }
   }
@@ -378,7 +377,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 
 function getCurrentTabId() {
-  console.log('this get called')
+  //console.log('this get called')
   return new Promise((resolve, reject) => {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       if (chrome.runtime.lastError) {

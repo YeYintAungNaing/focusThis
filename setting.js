@@ -35,13 +35,13 @@ function renderStrictModeList() {
 
 document.getElementById('addStrict').addEventListener("click", () => {
     const input = document.getElementById("urlInput");
-    const newDomain = input.value.trim();
-
-  if (newDomain && !strictModeDomains.includes(newDomain)) {
-    strictModeDomains.push(newDomain);
-    renderStrictModeList(); 
-    input.value = ""; 
-    chrome.storage.local.set({ strictModeDomains });
+    let newDomain = input.value.trim();
+    newDomain = new URL(newDomain).hostname
+    if (newDomain && !strictModeDomains.includes(newDomain)) {
+      strictModeDomains.push(newDomain);
+      renderStrictModeList(); 
+      input.value = ""; 
+      chrome.storage.local.set({ strictModeDomains });
   }
 })
 
